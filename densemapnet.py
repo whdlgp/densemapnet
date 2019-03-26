@@ -99,7 +99,9 @@ class DenseMapNet(object):
         x = Conv2D(filters=32, kernel_size=1, padding='same')(x)
         x = UpSampling2D(8)(x)
         if not self.settings.nopadding:
-            x = ZeroPadding2D(padding=(2, 0))(x)
+            shape_diff_x = xleft.get_shape().as_list()[1] - x.get_shape().as_list()[1]
+            shape_diff_y = xleft.get_shape().as_list()[2] - x.get_shape().as_list()[2]
+            x = ZeroPadding2D(padding=(int(shape_diff_x/2), int(shape_diff_y/2)))(x)
 
         # left image skip connection to disparity estimate
         x = keras.layers.concatenate([x, xleft])
