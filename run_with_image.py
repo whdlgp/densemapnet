@@ -22,6 +22,13 @@ from densemapnet import DenseMapNet
 
 from skimage import io
 
+import tensorflow as tf
+from keras.backend.tensorflow_backend import set_session
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+config.gpu_options.per_process_gpu_memory_fraction = 0.7 #try various numbers here
+set_session(tf.Session(config=config))
+
 DATA_PATH = './dataset/test_image/'
 IMAGE_WIDTH = 960
 IMAGE_HEIGHT = 540
@@ -36,8 +43,23 @@ def load_images_from_folder(folder):
         idx = np.arange(0, 3, 1)
         img = img[:, :, idx]
         img = img.reshape([IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_CHAN])
-        all_images.append(img)
+        all_images.append(img.astype(np.float32)/255)
     return np.array(all_images)
+
+def predict_images(settings, image, filepath):
+    size = [image.shape[0], image.shape[1]]
+    if settings.otanh:
+        image += 1.0
+        image =  np.clip(image, 0.0, 2.0)
+        image *= (255*0.5)
+    else:
+        image =  np.clip(image, 0.0, 1.0)
+        image *= 255
+
+    image = image.astype(np.uint8)
+    image = np.reshape(image, size)
+    misc.imsave(filepath, image)
+    return image
 
 def setting_with_args():
     parser = argparse.ArgumentParser()
@@ -105,7 +127,7 @@ def setting_with_args():
 if __name__ == '__main__':
     settings = setting_with_args()
     
-    #[nsamples, x_dim, y_dim, channel]
+    #[nsamples, y_dim, x_dim, channel]
     test_lx = load_images_from_folder(DATA_PATH+'left')
     test_rx = load_images_from_folder(DATA_PATH+'right')
     settings.channels = test_lx.shape[3]
@@ -114,18 +136,17 @@ if __name__ == '__main__':
 
     densemapnet = DenseMapNet(settings=settings)
     densemapnet_model = densemapnet.build_model()
-    idx = np.arange(0, 2, 1)
-    left_images = test_lx[idx, :, :, : ]
-    right_images = test_lx[idx, :, :, : ]
+    i = 0
+    indexes = np.arange(i, i + 1)
+    left_images = test_lx[indexes, :, :, : ]
+    right_images = test_rx[indexes, :, :, : ]
     predicted = densemapnet_model.predict([left_images, right_images])
 
     plt.subplot(1, 3, 1)
-    plt.imshow(test_lx[0])
+    plt.imshow(left_images[0])
     plt.subplot(1, 3, 2)
-    plt.imshow(test_rx[0])
+    plt.imshow(right_images[0])
     plt.subplot(1, 3, 3)
-    predict_int = misc.bytescale(predicted[0, :, :, 0], cmin = 0.0, cmax = 1.0)
-    plt.imsave('predict.png', predict_int, cmap='gray')
+    predict_int = predict_images(settings, predicted[0], 'predict.png')
     plt.imshow(predict_int)
-    plt.colorbar()
     plt.show()
