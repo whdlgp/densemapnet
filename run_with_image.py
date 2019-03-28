@@ -16,8 +16,8 @@ import matplotlib.image as img
 import matplotlib.pyplot as plt
 from scipy import misc
 
-from utils_mod import Settings
-from utils_mod import ElapsedTimer
+from utils import Settings
+from utils import ElapsedTimer
 from densemapnet import DenseMapNet
 
 from skimage import io
@@ -136,17 +136,11 @@ if __name__ == '__main__':
 
     densemapnet = DenseMapNet(settings=settings)
     densemapnet_model = densemapnet.build_model()
-    i = 0
-    indexes = np.arange(i, i + 1)
-    left_images = test_lx[indexes, :, :, : ]
-    right_images = test_rx[indexes, :, :, : ]
-    predicted = densemapnet_model.predict([left_images, right_images])
+    for i in range(test_lx.shape[0]):
+        indexes = np.arange(i, i + 1)
+        left_images = test_lx[indexes, :, :, : ]
+        right_images = test_rx[indexes, :, :, : ]
+        predicted = densemapnet_model.predict([left_images, right_images])
 
-    plt.subplot(1, 3, 1)
-    plt.imshow(left_images[0])
-    plt.subplot(1, 3, 2)
-    plt.imshow(right_images[0])
-    plt.subplot(1, 3, 3)
-    predict_int = predict_images(settings, predicted[0], 'predict.png')
-    plt.imshow(predict_int)
-    plt.show()
+        filename = 'predict%04d.png' % i
+        predict_int = predict_images(settings, predicted[0], filename)
